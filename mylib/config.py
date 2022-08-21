@@ -5,8 +5,8 @@
 # e.g., 'email@gmail.com'
 MAIL = ''
 # Enter the ip camera url (e.g., url = 'http://191.138.0.100:8040/video')
-url = ''
-
+# url = 'rtsp://testcamera:testcamera@192.168.1.118:554/stream2'
+url = 0
 # ON/OFF for mail feature. Enter True to turn on the email alert feature.
 ALERT = False
 # Set max. people inside limit. Optimise number below: 10, 50, 100, etc.
