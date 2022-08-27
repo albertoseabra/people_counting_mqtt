@@ -12,7 +12,7 @@ ALERT = False
 # Set max. people inside limit. Optimise number below: 10, 50, 100, etc.
 Threshold = 10
 # Threading ON/OFF
-Thread = False
+Thread = True
 # Simple log to log the counting data
 Log = False
 # Auto run/Schedule the software to run at your desired time

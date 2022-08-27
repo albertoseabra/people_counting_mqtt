@@ -1,14 +1,11 @@
 # People-Counting-in-Real-Time
+
+Original work with details: https://github.com/saimj7/People-Counting-in-Real-Time
+
+Changed to use threading and send the number of persons inside at regular intervals using MQTT
+
 People Counting in Real-Time using live video stream/IP camera in OpenCV.
 
-> This is an improvement/modification to https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/
-
-> Refer to added [Features](#features). Also, added support for an IP camera.
-
-<div align="center">
-<img src=https://imgur.com/SaF1kk3.gif" width=550>
-<p>Live demo</p>
-</div>
 
 - The primary aim is to use the project as a business perspective, ready to scale.
 - Use case: counting the number of people in the stores/buildings/shopping malls etc., in real-time.
@@ -17,6 +14,14 @@ People Counting in Real-Time using live video stream/IP camera in OpenCV.
 - Acts as a measure towards footfall analysis and in a way to tackle COVID-19.
 
 --- 
+
+
+
+<div align="center">
+<img src=https://imgur.com/SaF1kk3.gif" width=550>
+<p>Live demo</p>
+</div>
+
 
 ## Table of Contents
 * [Simple Theory](#simple-theory)
@@ -63,17 +68,6 @@ python run.py --prototxt mobilenet_ssd/MobileNetSSD_deploy.prototxt --model mobi
 
 ## Features
 The following is an example of the added features. Note: You can easily on/off them in the config. options (mylib/config.py):
-
-<img src="https://imgur.com/Lr8mdUW.png" width=500>
-
-***1. Real-Time alert:***
-- If selected, we send an email alert in real-time. Use case: If the total number of people (say 10 or 30) exceeded in a store/building, we simply alert the staff. 
-- You can set the max. people limit in config. (``` Threshold = 10 ```).
-- This is pretty useful considering the COVID-19 scenario. 
-<img src="https://imgur.com/35Yf1SR.png" width=350>
-
-- Note: To setup the sender email, please refer the instructions inside 'mylib/mailer.py'. Setup receiver email in the config.
-
 
 ***2. Threading:***
 - Multi-Threading is implemented in 'mylib/thread.py'. If you ever see a lag/delay in your real-time stream, consider using it.
