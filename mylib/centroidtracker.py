@@ -37,8 +37,7 @@ class CentroidTracker:
 		del self.disappeared[objectID]
 
 	def update(self, rects):
-		# check to see if the list of input bounding box rectangles
-		# is empty
+		# check to see if the list of input bounding box rectangles is empty
 		if len(rects) == 0:
 			# loop over any existing tracked objects and mark them
 			# as disappeared
@@ -65,8 +64,7 @@ class CentroidTracker:
 			cY = int((startY + endY) / 2.0)
 			inputCentroids[i] = (cX, cY)
 
-		# if we are currently not tracking any objects take the input
-		# centroids and register each of them
+		# if we are currently not tracking any objects take the input centroids and register each of them
 		if len(self.objects) == 0:
 			for i in range(0, len(inputCentroids)):
 				self.register(inputCentroids[i])

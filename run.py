@@ -7,18 +7,20 @@ import time, schedule, csv
 import numpy as np
 import argparse, imutils
 import time, dlib, cv2, datetime
-from itertools import zip_longest
 
 import os
 import threading
 
 import paho.mqtt.client as mqtt
 
-os.environ["MQTT_BROKER"] = "test.mosquitto.org"
-os.environ["MQTT_TOPIC"] = "alberto/num_persons"
+
+os.environ["MQTT_BROKER"] = "13.40.139.95"
+os.environ["MQTT_TOPIC"] = "Pers"
+# os.environ["URL"] = 'rtsp://testcamera:testcamera@192.168.1.118:554/stream2'
+# os.environ["URL"] = 'rtsp://IOTconteo:adIOT45cvYy@192.168.1.150:554/stream2'
 
 # camera orientation, if vertical it considers entering the direction up to down, to false entering is left to right
-vertical_orientation = True
+vertical_orientation = False
 
 # if debug will show video feed with extra information
 debug = True
@@ -27,32 +29,34 @@ people_inside = 0
 
 t0 = time.time()
 
-
 def run_mqtt():
     global people_inside
     # Start by connecting to mqtt
     client = mqtt.Client()
+    client.username_pw_set(username="mqttbrokeruser", password="mqttpasswordiotproject")
     client.connect(os.environ.get("MQTT_BROKER", "test.mosquitto.org"), int(os.environ.get("MQTT_PORT", 1883)))
     print("connected successfully to mqtt")
     while True:
         print("Total people inside: {}".format(people_inside))
         client.publish(topic=os.environ.get("MQTT_TOPIC", "alberto/testing"),
                            payload=str(people_inside), qos=1, retain=True)
+        # loop to give time for ack
+        client.loop(1)
         time.sleep(5)
 
 def run_main():
     # construct the argument parse and parse the arguments
     ap = argparse.ArgumentParser()
-    ap.add_argument("-p", "--prototxt", required=False,
+    ap.add_argument("-p", "--prototxt", required=False, default="mobilenet_ssd/MobileNetSSD_deploy.prototxt",
                     help="path to Caffe 'deploy' prototxt file")
-    ap.add_argument("-m", "--model", required=True,
+    ap.add_argument("-m", "--model", required=False, default="mobilenet_ssd/MobileNetSSD_deploy.caffemodel",
                     help="path to Caffe pre-trained model")
     ap.add_argument("-i", "--input", type=str,
                     help="path to optional input video file")
     # confidence default 0.4
     ap.add_argument("-c", "--confidence", type=float, default=0.4,
                     help="minimum probability to filter weak detections")
-    ap.add_argument("-s", "--skip-frames", type=int, default=20,
+    ap.add_argument("-s", "--skip-frames", type=int, default=15,
                     help="# of skip frames between detections")
     args = vars(ap.parse_args())
 
@@ -69,7 +73,7 @@ def run_main():
     # if a video path was not supplied, grab a reference to the ip camera
     if not args.get("input", False):
         print("[INFO] Starting the live stream..")
-        vs = VideoStream(config.url).start()
+        vs = VideoStream(os.environ.get("URL", 0)).start()
         time.sleep(2.0)
 
     # otherwise, grab a reference to the video file
@@ -82,7 +86,7 @@ def run_main():
     H = None
 
     # instantiate centroid tracker, list to store dlib trackers, a dictionary to map object ID to a TrackableObject
-    ct = CentroidTracker(maxDisappeared=40, maxDistance=50)
+    ct = CentroidTracker(maxDisappeared=80, maxDistance=100)
     trackers = []
     trackableObjects = {}
 
@@ -95,9 +99,6 @@ def run_main():
     # start the frames per second throughput estimator
     fps = FPS().start()
 
-    # if config.Thread:
-    #     vs = thread.ThreadingClass(config.url)
-
     # loop over frames from the video stream
     while True:
         frame = vs.read()
@@ -108,7 +109,7 @@ def run_main():
             break
 
         # resize the frame to have a maximum width of 500 pixels then convert the frame from BGR to RGB for dlib
-        frame = imutils.resize(frame, width=900)
+        frame = imutils.resize(frame, width=800)
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         # if the frame dimensions are empty, set them
@@ -121,23 +122,20 @@ def run_main():
         status = "Waiting"
         rects = []
 
-        # check to see if we should run a more computationally expensive
-        # object detection method to aid our tracker
+        # check to see if we should run a more computationally expensive object detection method to aid our tracker
         if totalFrames % args["skip_frames"] == 0:
             # set the status and initialize our new set of object trackers
             status = "Detecting"
             trackers = []
 
-            # convert the frame to a blob and pass the blob through the
-            # network and obtain the detections
-            blob = cv2.dnn.blobFromImage(frame, 0.007843, (W, H), 127.5)
+            # convert the frame to a blob and pass the blob through the network and obtain the detections
+            # blob = cv2.dnn.blobFromImage(frame, 0.007843, (W, H), 127.5)
+            blob = cv2.dnn.blobFromImage(frame, 0.00392, (W, H), 127.5)
             net.setInput(blob)
             detections = net.forward()
 
-            # loop over the detections
             for i in np.arange(0, detections.shape[2]):
-                # extract the confidence (i.e., probability) associated
-                # with the prediction
+                # extract the confidence (i.e., probability) associated with the prediction
                 confidence = detections[0, 0, i, 2]
 
                 if confidence > args["confidence"]:
@@ -165,7 +163,7 @@ def run_main():
 
         # otherwise, we should utilize our object *trackers* rather than
         # object *detectors* to obtain a higher frame processing throughput
-        else:
+        elif totalFrames % 2 == 0:
             # loop over the trackers
             for tracker in trackers:
                 # set the status of our system to be 'tracking' rather than 'waiting' or 'detecting'
@@ -183,6 +181,8 @@ def run_main():
 
                 # add the bounding box coordinates to the rectangles list
                 rects.append((startX, startY, endX, endY))
+                if debug:
+                    cv2.rectangle(frame, (startX, startY), (endX, endY), (0, 0, 255), 3)
 
         if debug:
             # draw a line in the center to determine whether they were entering or exiting
@@ -275,17 +275,6 @@ def run_main():
             if key == ord("q"):
                 break
 
-        # Initiate a simple log to save data at end of the day
-        if config.Log:
-            datetimee = [datetime.datetime.now()]
-            d = [datetimee, people_inside]
-            export_data = zip_longest(*d, fillvalue='')
-
-            with open('Log.csv', 'w', newline='') as myfile:
-                wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-                wr.writerow(("End Time", "In", "Out", "Total Inside"))
-                wr.writerows(export_data)
-
         # increment the total number of frames processed thus far and then update the FPS counter
         totalFrames += 1
         fps.update()
@@ -303,16 +292,12 @@ def run_main():
     print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
 
     # # if we are not using a video file, stop the camera video stream
-    # if not args.get("input", False):
-    # 	vs.stop()
-    #
-    # # otherwise, release the video file pointer
-    # else:
-    # 	vs.release()
+    if not args.get("input", False):
+    	vs.stop()
 
-    # issue 15
-    # if config.Thread:
-    #     vs.release()
+    # otherwise, release the video file pointer
+    else:
+    	vs.release()
 
     # close any open windows
     cv2.destroyAllWindows()
