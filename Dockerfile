@@ -3,7 +3,7 @@ FROM python:3.7
 RUN apt-get update
 RUN apt-get install libgl1 -y
 
-RUN pip install cmake==3.22.5
+RUN pip install --upgrade pip setuptools wheel
 
 COPY ./requirements.txt /app/requirements.txt
 WORKDIR /app
